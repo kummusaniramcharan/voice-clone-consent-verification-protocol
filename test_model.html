@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Model Test</title>
+</head>
+<body>
+  <h1>Transformers.js Model Test</h1>
+  <div id="status">Starting...</div>
+  <pre id="log"></pre>
+
+  <script type="module">
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+    function log(msg) {
+      console.log(msg);
+      logEl.textContent += msg + '\n';
+    }
+
+    try {
+      log('Importing Transformers.js...');
+      const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3');
+      log('Transformers.js imported successfully.');
+
+      env.allowLocalModels = false;
+      env.useBrowserCache = true;
+      if (env.backends && env.backends.onnx) {
+        env.backends.onnx.wasm = env.backends.onnx.wasm || {};
+        const hasSAB = typeof SharedArrayBuffer !== 'undefined' && window.crossOriginIsolated;
+        env.backends.onnx.wasm.numThreads = hasSAB ? 2 : 1;
+        log('WASM numThreads: ' + env.backends.onnx.wasm.numThreads);
+      }
+
+      log('Attempting to create audio-classification pipeline for ai8shiro/deepfake-audio-wav2vec2-ONNX...');
+      const classifier = await pipeline('audio-classification', 'ai8shiro/deepfake-audio-wav2vec2-ONNX', {
+        device: 'wasm',
+        dtype: 'q4',
+        progress_callback: (item) => {
+          if (item.status === 'progress' && item.total > 0) {
+            statusEl.textContent = `Progress: ${Math.round((item.loaded / item.total) * 100)}% (${item.file})`;
+          } else if (item.status === 'initiate') {
+            statusEl.textContent = `Initiating ${item.file}...`;
+          } else if (item.status === 'done') {
+            log(`Loaded file: ${item.file}`);
+          }
+        }
+      });
+
+      log('Pipeline created successfully!');
+      statusEl.textContent = 'Pipeline created! Running test inference with 16kHz dummy audio...';
+
+      // 4 seconds of 16kHz audio = 64000 samples
+      const dummyPcm = new Float32Array(64000);
+      for (let i = 0; i < dummyPcm.length; i++) {
+        dummyPcm[i] = Math.sin(i * 0.05) * 0.2; // 0.2 amplitude sine
+      }
+
+      const output = await classifier(dummyPcm, { topk: 2 });
+      log('Inference output: ' + JSON.stringify(output));
+      statusEl.textContent = 'SUCCESS! Model works.';
+    } catch (err) {
+      log('ERROR: ' + err.message + '\n' + err.stack);
+      statusEl.textContent = 'FAILED: ' + err.message;
+    }
+  </script>
+</body>
+</html>

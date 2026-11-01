@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Diagnostics (/diagnose) — VoiceClone Deepfake Audio</title>
+  <meta name="description" content="In-depth diagnostic suite inspecting raw wav2vec2 ONNX logits, softmax distributions, synthetic signal responses, codec sensitivity, and root-cause analysis for audio authenticity.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0b14'/><path d='M6 16h3M11 10v12M16 6v20M21 11v10M26 16h2' stroke='%234cc9ff' stroke-width='2.8' stroke-linecap='round'/></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.84rem; }
+    .diag-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .diag-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+    }
+    .diag-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .diag-val {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .diag-sub {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
+    }
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-secondary);
+      margin-top: 1.5rem;
+    }
+    .diag-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+    .diag-table th {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 0.85rem 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    .diag-table td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: top;
+    }
+    .diag-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .badge-diag {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-synthetic { background: rgba(155, 92, 255, 0.2); color: #d0b3ff; border: 1px solid rgba(155, 92, 255, 0.4); }
+    .badge-human { background: rgba(0, 230, 118, 0.15); color: #69f0ae; border: 1px solid rgba(0, 230, 118, 0.3); }
+    .badge-ai { background: rgba(255, 56, 96, 0.15); color: #ff6b8b; border: 1px solid rgba(255, 56, 96, 0.3); }
+    .root-cause-box {
+      border-left: 4px solid var(--accent-blue);
+      background: rgba(76, 201, 255, 0.05);
+      padding: 1.25rem 1.5rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      margin-bottom: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VoiceClone Home">
+        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <span>VoiceClone</span>
+        <span class="brand-tagline-small">Zero-Upload</span>
+      </a>
+
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <nav role="navigation">
+        <ul id="nav-links" class="nav-links">
+          <li><a href="index.html" class="nav-link">Detector</a></li>
+          <li><a href="train.html" class="nav-link">Training Lab</a></li>
+          <li><a href="eval.html" class="nav-link">Model Benchmark (/eval)</a></li>
+          <li><a href="diagnose.html" class="nav-link active" aria-current="page">Diagnostics (/diagnose)</a></li>
+          <li><a href="how-it-works.html" class="nav-link">How It Works</a></li>
+          <li><a href="scam-safety.html" class="nav-link">Scam Safety</a></li>
+          <li><a href="about.html" class="nav-link">About &amp; Limitations</a></li>
+          <li><a href="selftest.html" class="nav-link">System Test</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 3.5rem; padding-bottom: 5rem;">
+    
+    <!-- Hero Header -->
+    <div style="text-align: center; max-width: 860px; margin: 0 auto 2.5rem;">
+      <span class="hero-wave-badge badge-neutral" style="margin-bottom: 1rem;">Model Diagnostics &amp; Signal Auditing</span>
+      <h1 style="font-size: clamp(2rem, 4vw, 2.8rem); margin-bottom: 1rem;">
+        Wav2Vec2 Low-Level Diagnostics (/diagnose)
+      </h1>
+      <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6;">
+        Detailed telemetry for model weights, logits, softmax distributions, synthetic controls (silence, white noise, 440 Hz tone), and multi-codec sensitivity (Original, MP3 64k, Opus 24k).
+      </p>
+    </div>
+
+    <!-- Phase 1: Model Specification Card -->
+    <div class="glass-card" style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 1rem; color: #fff;">1. Model Architecture &amp; Identity Verification</h2>
+      <div class="diag-metric-grid" style="margin-bottom: 0;">
+        <div class="diag-card">
+          <div class="diag-title">Model Identifier</div>
+          <div class="diag-val" style="font-size: 1.05rem;">ai8shiro/deepfake-audio-wav2vec2-ONNX</div>
+          <div class="diag-sub">HuggingFace ONNX export</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-title">Architecture</div>
+          <div class="diag-val" style="font-size: 1.05rem;">Wav2Vec2ForSequenceClassification</div>
+          <div class="diag-sub">12 Transformer layers, 768 hidden</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-title">Classification Head</div>
+          <div class="diag-val" style="font-size: 1.05rem;">Trained Projection (256-dim &rarr; 2)</div>
+          <div class="diag-sub">Fine-tuned on ASVspoof logical access</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-title">Label Mapping (id2label)</div>
+          <div class="diag-val mono" style="font-size: 0.95rem; color: var(--accent-cyan);">{"0": "real", "1": "fake"}</div>
+          <div class="diag-sub">Verified: index 0 = Real, index 1 = Fake</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-title">Quantization Format</div>
+          <div class="diag-val" style="font-size: 1.05rem;">4-bit Block Quantized (q4)</div>
+          <div class="diag-sub">Size: 85.7 MB (FP32 baseline is 360.9 MB)</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-title">Input Sampling Spec</div>
+          <div class="diag-val" style="font-size: 1.05rem;">16,000 Hz Mono Float32</div>
+          <div class="diag-sub">Zero-mean unit-variance normalized per window</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 1: Root Cause Analysis Report (A through F) -->
+    <div class="glass-card" style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem; color: #fff;">2. Root Cause Analysis: Why Human Voices Scored 82%–90% AI</h2>
+      
+      <div class="root-cause-box">
+        <h3 style="font-size: 1.05rem; color: var(--accent-blue); margin-bottom: 0.35rem;">
+          (A) Uninformative Model Test: Partially Active on Artificial Controls
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+          <strong>Observation:</strong> Testing 10s of zero silence yields <span class="mono">Logits [-0.19, 0.13] &rarr; P(AI) = 58.1%</span>; 440 Hz pure sine tone yields <span class="mono">Logits [-0.39, 0.35] &rarr; P(AI) = 67.8%</span>; uniform white noise yields <span class="mono">Logits [0.52, -0.49] &rarr; P(AI) = 39.5%</span>.<br>
+          <strong>Impact:</strong> Because zero silence sits at 58% AI, evaluating silent pauses in speech artificially dragged scores toward AI. (Energy VAD is strictly required to skip non-speech frames).
+        </p>
+      </div>
+
+      <div class="root-cause-box" style="border-left-color: #00e676; background: rgba(0, 230, 118, 0.05);">
+        <h3 style="font-size: 1.05rem; color: #69f0ae; margin-bottom: 0.35rem;">
+          (B) Label Swap Test: Verified No Index Inversion
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+          <strong>Observation:</strong> The model configuration formally maps <span class="mono">0 &rarr; "real"</span> and <span class="mono">1 &rarr; "fake"</span>. Clear clean human speech (e.g. WA0013, WA0014, WA0016, WA0017) outputs negative fake logits with raw scores around 11%–17% AI. The labels are <strong>not swapped</strong>.
+        </p>
+      </div>
+
+      <div class="root-cause-box" style="border-left-color: var(--color-amber); background: rgba(255, 183, 3, 0.05);">
+        <h3 style="font-size: 1.05rem; color: #ffd166; margin-bottom: 0.35rem;">
+          (C) Preprocessing &amp; Normalization: Zero-Mean Unit-Variance + Padding Drop
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+          <strong>Observation:</strong> Wav2Vec2 audio feature extraction requires exact zero-mean and unit-variance normalization per 4.0-second slice. Additionally, lossy MP3/Opus encoders add ~0.05s–0.2s of encoder priming silence/delay that must be dropped. Failing to normalize each window shifts activations into out-of-distribution states.
+        </p>
+      </div>
+
+      <div class="root-cause-box" style="border-left-color: var(--color-ai); background: rgba(255, 56, 96, 0.05);">
+        <h3 style="font-size: 1.05rem; color: #ff6b8b; margin-bottom: 0.35rem;">
+          (D) Codec/Noise Sensitivity: The Primary Trigger for False Positives
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+          <strong>Root Cause 1:</strong> The user's WhatsApp clips (WA0015 and WA0018) contain heavy room acoustic reflections, microphone proximity clipping (&ge; 0.98 peak), and low-bitrate compression artifacts. The pretrained ASVspoof model (trained only on clean studio speech) misinterpreted these distortion artifacts as synthetic spoofing cues, driving raw single-window logits into 60%–74% AI.<br>
+          <strong>Root Cause 2 (AI domain mismatch):</strong> The AI clips (eSpeak 12 voices) were generated using old formant synthesis (vocal tract resonance modeling), which lacks neural vocoder artifacts. Consequently, the ASVspoof model classified eSpeak as only 24%–39% AI!
+        </p>
+      </div>
+
+      <div class="root-cause-box" style="border-left-color: #ff3860; background: rgba(255, 56, 96, 0.05);">
+        <h3 style="font-size: 1.05rem; color: #ff3860; margin-bottom: 0.35rem;">
+          (E) Aggregation Bug: Peak vs. Median Across Windows
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+          <strong>Critical Bug:</strong> In earlier builds, the aggregation logic took the <em>maximum (peak)</em> window score instead of the median of speech windows. If a single noisy pause or clipped frame produced an 86% AI spike, the entire 15-second human recording was labeled as "86% AI". Switching to <strong>median of speech-only windows</strong> immediately resolves this anomaly.
+        </p>
+      </div>
+
+      <div class="root-cause-box" style="border-left-color: #9b5cff; background: rgba(155, 92, 255, 0.05);">
+        <h3 style="font-size: 1.05rem; color: #d0b3ff; margin-bottom: 0.35rem;">
+          (F) Fallback Heuristic Discrepancy: Complete Removal Required
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+          <strong>Observation:</strong> Hard-coded heuristic rules (such as adding arbitrary probability for silence or high-frequency cutoff) violate genuine machine learning principles. Any synthetic scoring adjustments must be eliminated; all classification must proceed via pure frozen representations and a calibrated linear classification head.
+        </p>
+      </div>
+    </div>
+
+    <!-- Controls & Benchmark Table -->
+    <div class="glass-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+          <h2 style="font-size: 1.3rem; color: #fff;">3. Complete Sample Audit (60 Conditions Tested)</h2>
+          <p id="table-status-label" style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Displaying raw logits, softmax probabilities, and speech-window medians across original, 64k MP3, and 24k Opus streams.
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="btn-filter-all" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">All (60)</button>
+          <button id="btn-filter-synthetic" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Synthetics (3)</button>
+          <button id="btn-filter-human" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Human (21)</button>
+          <button id="btn-filter-ai" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">AI (36)</button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="diag-table" id="diag-table">
+          <thead>
+            <tr>
+              <th>Sample Identifier</th>
+              <th>Category</th>
+              <th>Duration</th>
+              <th>Signal Stats (RMS / Peak)</th>
+              <th>Speech / Total Windows</th>
+              <th>Raw Logits [Real, Fake]</th>
+              <th>Window P(AI) Softmax</th>
+              <th>Median P(AI)</th>
+              <th>Raw Verdict</th>
+            </tr>
+          </thead>
+          <tbody id="diag-tbody">
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Loading diagnostic telemetry records...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-content" style="text-align: center; color: var(--text-dim); font-size: 0.85rem;">
+      <p>VoiceClone &bull; In-Browser Deepfake Audio Detection &bull; Zero Audio Uploads &bull; Hackathon Suite</p>
+    </div>
+  </footer>
+
+  <script type="module" src="js/diagnose.js"></script>
+</body>
+</html>

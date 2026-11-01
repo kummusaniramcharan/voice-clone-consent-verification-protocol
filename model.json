@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "trainedAt": null,
+  "featureNames": [
+    "noise_floor_dbfs",
+    "dyn_range_db",
+    "digital_silence_pct",
+    "bandwidth_hz",
+    "spec_flatness",
+    "spec_centroid_hz",
+    "rolloff95_hz",
+    "hf_4_8k_ratio",
+    "spec_flux_cv",
+    "mfcc_temporal_std",
+    "mfcc_delta_mean",
+    "f0_mean_hz",
+    "f0_std_semitones",
+    "f0_range_semitones",
+    "voiced_pct",
+    "f0_flat_step_pct",
+    "hnr_mean_db",
+    "hnr_std_db",
+    "amp_frame_shimmer_pct",
+    "pause_per_10s",
+    "pause_mean_s",
+    "pause_cv",
+    "mod_peak_hz",
+    "mod_peak_ratio"
+  ],
+  "mean": {},
+  "std": {},
+  "weights": {},
+  "bias": 0.0,
+  "threshold": 0.5,
+  "uncertainBand": [0.35, 0.65],
+  "ood": {
+    "mean": {},
+    "std": {}
+  },
+  "training": {
+    "nClips": 0,
+    "sources": {
+      "ai": [],
+      "human": []
+    },
+    "cv": {
+      "accuracy": null,
+      "balancedAccuracy": null,
+      "auc": null
+    }
+  }
+}

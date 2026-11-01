@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How It Works — VoiceClone Acoustic DSP &amp; Trained Classifier</title>
+  <meta name="description" content="Learn how VoiceClone analyzes voice authenticity in-browser using 24 acoustic DSP features, pitch jitter, spectral analysis, and an on-device trained logistic model. Zero uploads.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="How VoiceClone Analyzes Synthetic Audio in Your Browser">
+  <meta property="og:description" content="Discover how client-side acoustic DSP feature extraction and trained logistic regression detect AI voice cloning without uploading any audio.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0b14'/><path d='M6 16h3M11 10v12M16 6v20M21 11v10M26 16h2' stroke='%234cc9ff' stroke-width='2.8' stroke-linecap='round'/></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <style>
+    .steps-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin: 2.5rem 0;
+    }
+    .step-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      position: relative;
+    }
+    .step-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-family: var(--font-heading);
+      margin-bottom: 1.25rem;
+    }
+    .step-title {
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+      color: #ffffff;
+    }
+    .step-text {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .diagram-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      margin: 3rem 0;
+    }
+    .diagram-svg {
+      width: 100%;
+      max-width: 820px;
+      margin: 1.5rem auto 0;
+      display: block;
+    }
+    .feature-compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 768px) {
+      .feature-compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VoiceClone Home">
+        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <span>VoiceClone</span>
+        <span class="brand-tagline-small">Zero-Upload</span>
+      </a>
+
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <nav role="navigation">
+        <ul id="nav-links" class="nav-links">
+          <li><a href="index.html" class="nav-link">Detector</a></li>
+          <li><a href="train.html" class="nav-link">Training Lab</a></li>
+          <li><a href="how-it-works.html" class="nav-link active" aria-current="page">How It Works</a></li>
+          <li><a href="scam-safety.html" class="nav-link">Scam Safety</a></li>
+          <li><a href="about.html" class="nav-link">About &amp; Limitations</a></li>
+          <li><a href="selftest.html" class="nav-link">System Test</a></li>
+          <li><span class="nav-badge-pill">Client-Side Only</span></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 3rem; padding-bottom: 4rem;">
+    
+    <!-- Hero Introduction -->
+    <div style="text-align: center; max-width: 800px; margin: 0 auto 3rem;">
+      <span class="hero-wave-badge badge-neutral" style="margin-bottom: 1rem;">System Architecture &amp; Acoustics</span>
+      <h1 style="font-size: clamp(2rem, 4vw, 3.2rem); margin-bottom: 1.25rem;">
+        How VoiceClone Scans Speech in Your Browser
+      </h1>
+      <p style="font-size: 1.1rem; color: var(--text-muted); line-height: 1.6;">
+        VoiceClone uses standard <strong>Web Audio API DSP</strong> to extract 24 physical vocal cues, standardizes them against a <strong>trained L2-regularized logistic model</strong>, and computes a calibrated authenticity verdict—100% inside your browser memory.
+      </p>
+    </div>
+
+    <!-- 4-Step Visual Flow -->
+    <section aria-labelledby="flow-title">
+      <h2 id="flow-title" style="text-align: center; font-size: 1.8rem; margin-bottom: 0.5rem;">
+        The 4-Step Analysis Pipeline
+      </h2>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.95rem;">
+        Every byte of audio is decoded, measured, and classified locally on your device in real time.
+      </p>
+
+      <div class="steps-container">
+        <!-- Step 1 -->
+        <div class="step-card">
+          <div class="step-badge">1</div>
+          <h3 class="step-title">Audio Decode &amp; Quality Gate</h3>
+          <p class="step-text">
+            Audio is decoded with <code>AudioContext.decodeAudioData()</code>, mixed to mono, and resampled to 16,000 Hz using <code>OfflineAudioContext</code>. Quality checks inspect duration (min 3s), clipping percentage (max 5%), silence proportion (max 70%), and RMS loudness (min -45 dBFS).
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card">
+          <div class="step-badge">2</div>
+          <h3 class="step-title">DSP Feature Extraction</h3>
+          <p class="step-text">
+            A pure DSP module computes 24 exact cues across 4 domains: recording noise floor &amp; bandwidth, Hann-windowed FFT spectral flatness &amp; 26-filter MFCC timbre variance, autocorrelation pitch (F0 jitter, flat plateaus, HNR), and pause cadence dynamics.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card">
+          <div class="step-badge">3</div>
+          <h3 class="step-title">Trained Neural &amp; DSP Model</h3>
+          <p class="step-text">
+            Audio is processed with fine-tuned wav2vec2 ONNX models (running via WebGPU with WASM fallback) alongside regularized logistic regression on acoustic features, delivering sub-150ms live window inference without cloud dependency.
+          </p>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-card">
+          <div class="step-badge">4</div>
+          <h3 class="step-title">Calibrated Verdict &amp; Explanations</h3>
+          <p class="step-text">
+            The logit produces a sigmoid probability <code>P(AI)</code>, displayed as an AI likelihood percentage. The top 3 contributing acoustic features are highlighted in plain English with comparative reference values from the training dataset.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE SCAM-CALL STREAMING ENGINE SECTION -->
+    <section class="glass-card" style="margin-top: 3.5rem; padding: 2.25rem;">
+      <span class="hero-wave-badge badge-neutral" style="margin-bottom: 0.75rem;">Real-Time Protection Engine</span>
+      <h2 style="font-size: 1.6rem; color: #ffffff; margin-bottom: 1rem;">
+        How the Live Scam-Call Voice Tracker Operates
+      </h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+        Unlike batch file analyzers, the Live Tracker operates as an active call shield. It evaluates live audio continuously, maintains sliding state memory, and monitors spoken dialogue patterns simultaneously.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <h4 style="color: var(--accent-blue); margin-bottom: 0.5rem;">1. 16 kHz AudioWorklet Streaming</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+            Continuous 16 kHz Float32 PCM is captured from Microphone (speakerphone mode) or Tab audio via <code>getDisplayMedia</code>. Audio is buffered in a 48,000-sample ring buffer, slicing 3.0-second sliding windows every 1.0 second (2.0s overlap).
+          </p>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <h4 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">2. Voice Activity Detection (VAD)</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+            Energy thresholds and Zero-Crossing Rate (ZCR) filter out background silence and room echo. Silent frames are bypassed to prevent false neural triggers and reduce battery consumption.
+          </p>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <h4 style="color: var(--accent-purple); margin-bottom: 0.5rem;">3. EMA Smoothing &amp; Hysteresis</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+            Scores from the last 30 windows are integrated via Exponential Moving Average (&alpha; = 0.30). A 3-window state debounce ensures random acoustic spikes never trigger false alarms.
+          </p>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <h4 style="color: #ff3860; margin-bottom: 0.5rem;">4. Multi-Modal Cross Escalation</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+            Combines AI Voice probability (50%), scam keyword density (35%), and urgency pressure (15%). When synthetic voice correlates with critical extortion or "digital arrest" terms, synergy multipliers escalate the threat index above 88/100.
+          </p>
+        </div>
+      </div>
+
+      <div class="honesty-banner" style="margin-top: 1.75rem;">
+        <div class="honesty-icon">🛡️</div>
+        <div class="honesty-content">
+          <h4>Honest Mobile Limitations &amp; Architecture</h4>
+          <p>
+            Standard web browsers cannot access cellular call downlinks due to Android 10+ and iOS security sandbox restrictions. VoiceClone recommends putting phone calls on speakerphone beside your laptop or phone microphone for acoustic capture, or using the tab audio source for WhatsApp/Meet calls.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visual Architecture Diagram (SVG) -->
+    <div class="diagram-card">
+      <h3 style="font-size: 1.4rem; margin-bottom: 0.5rem; text-align: center;">Browser Processing Flow</h3>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.5rem;">
+        Zero data transfer: audio files and microphone streams never leave the browser sandbox.
+      </p>
+
+      <svg class="diagram-svg" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Architecture diagram showing audio input passing into Web Audio API, resampled to 16kHz, fed into DSP feature extraction and trained logistic regression model.">
+        <!-- Input Block -->
+        <rect x="20" y="70" width="160" height="100" rx="12" fill="#161b30" stroke="#4cc9ff" stroke-width="1.8"/>
+        <text x="100" y="108" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" text-anchor="middle">Input Audio</text>
+        <text x="100" y="128" fill="#9ba5c4" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Mic (Raw) / Upload</text>
+        <text x="100" y="146" fill="#00f5d4" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Quality Gate (Clip/Sil)</text>
+
+        <!-- Arrow 1 -->
+        <path d="M190 120H230" stroke="#4cc9ff" stroke-width="2" stroke-dasharray="4 4"/>
+        <polygon points="230,120 222,115 222,125" fill="#4cc9ff"/>
+
+        <!-- Resampler Block -->
+        <rect x="240" y="70" width="160" height="100" rx="12" fill="#161b30" stroke="#9b5cff" stroke-width="1.8"/>
+        <text x="320" y="108" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" text-anchor="middle">16 kHz Resampler</text>
+        <text x="320" y="128" fill="#9ba5c4" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">OfflineAudioContext</text>
+        <text x="320" y="146" fill="#9b5cff" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Mono 16k Float32</text>
+
+        <!-- Arrow 2 -->
+        <path d="M410 120H450" stroke="#9b5cff" stroke-width="2" stroke-dasharray="4 4"/>
+        <polygon points="450,120 442,115 442,125" fill="#9b5cff"/>
+
+        <!-- DSP Features & Model Block -->
+        <rect x="460" y="55" width="160" height="130" rx="12" fill="#161b30" stroke="#00f5d4" stroke-width="2"/>
+        <text x="540" y="90" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="14" text-anchor="middle">Acoustic DSP</text>
+        <text x="540" y="110" fill="#00f5d4" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">24 Physical Features</text>
+        <text x="540" y="128" fill="#9ba5c4" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Autocorrelation / MFCC</text>
+        <text x="540" y="146" fill="#ffb703" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Trained Logistic Reg</text>
+
+        <!-- Arrow 3 -->
+        <path d="M630 120H670" stroke="#00f5d4" stroke-width="2" stroke-dasharray="4 4"/>
+        <polygon points="670,120 662,115 662,125" fill="#00f5d4"/>
+
+        <!-- Verdict Block -->
+        <rect x="680" y="70" width="100" height="100" rx="12" fill="#161b30" stroke="#4cc9ff" stroke-width="1.8"/>
+        <text x="730" y="110" fill="#ffffff" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="13" text-anchor="middle">UI Report</text>
+        <text x="730" y="130" fill="#00e676" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">P(AI) Likelihood</text>
+        <text x="730" y="146" fill="#9ba5c4" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Top 3 Features</text>
+
+        <!-- Sandbox Shield Border -->
+        <rect x="10" y="25" width="780" height="190" rx="16" fill="none" stroke="rgba(76, 201, 255, 0.2)" stroke-width="1" stroke-dasharray="6 6"/>
+        <text x="400" y="44" fill="rgba(76, 201, 255, 0.7)" font-family="Inter, sans-serif" font-size="11" font-weight="600" text-anchor="middle">🔒 Sandboxed Browser Context — 0 Bytes Audio Transmitted Remotely</text>
+      </svg>
+    </div>
+
+    <!-- Acoustic Differences Section -->
+    <section style="margin: 4rem 0;">
+      <h2 style="font-size: 2rem; margin-bottom: 1rem;">Physical Cues Analyzed by VoiceClone</h2>
+      <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.7; margin-bottom: 2rem;">
+        Text-to-speech models and neural vocoders assemble speech from discrete phonetic representations. This introduces measurable acoustic anomalies across pitch regularity, pause dynamics, and harmonic clarity:
+      </p>
+
+      <div class="feature-compare-grid">
+        <div class="step-card" style="border-left: 3px solid var(--color-human);">
+          <h3 style="font-size: 1.2rem; color: var(--color-human); margin-bottom: 0.75rem;">Natural Human Vocal Cues</h3>
+          <ul style="padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;">
+            <li><strong>Continuous Pitch Drift:</strong> Human vocal cords undergo involuntary micro-vibrations, yielding continuous sub-Hz frequency variations rather than rigid steps.</li>
+            <li><strong>Dynamic Shimmer &amp; Jitter:</strong> Amplitude and frequency fluctuate frame-to-frame during natural speech respiration.</li>
+            <li><strong>Natural Breathing &amp; Room Tone:</strong> Pauses between spoken phrases contain ambient room tone and inhalation sounds, rather than mathematical zero-amplitude gaps.</li>
+            <li><strong>Dynamic Articulation:</strong> Formant frequencies shift gradually as the vocal tract, tongue, and lips change physical position.</li>
+          </ul>
+        </div>
+
+        <div class="step-card" style="border-left: 3px solid var(--color-ai);">
+          <h3 style="font-size: 1.2rem; color: var(--color-ai); margin-bottom: 0.75rem;">Synthetic AI Audio Traces</h3>
+          <ul style="padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;">
+            <li><strong>Monotone Pitch Plateaus:</strong> Synthetic speech often locks onto exact fundamental frequencies across adjacent frames (&lt;0.5 Hz difference).</li>
+            <li><strong>Overly Pure Harmonics (High HNR):</strong> Neural synthesizers frequently render overtone tracks that lack natural vocal roughness or breathiness.</li>
+            <li><strong>Digital Silence Gaps:</strong> Artificial synthesis engines often clamp pause energy to absolute digital zero (RMS &lt; 1e-5).</li>
+            <li><strong>Uniform Pause Rhythm:</strong> Synthetic phrasing often spaces sentences with mechanically consistent pause intervals (low pause CV).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Training Lab Integration Section -->
+    <section class="glass-card" style="margin-top: 3rem;">
+      <h2 style="font-size: 1.8rem; margin-bottom: 1rem; color: #ffffff;">In-Browser Custom Training Lab</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; margin-bottom: 1rem;">
+        Because vocal synthesis models evolve rapidly, VoiceClone provides an integrated <a href="train.html" style="color: var(--accent-cyan); text-decoration: underline;">Training Lab</a>. You can import your own real and synthetic voice clips, apply synthetic data augmentations (gain, pink noise, low-pass filtering, room reverb, and bit quantization) to prevent hardware bias, and fit a custom L2-regularized logistic model.
+      </p>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7;">
+        Validation employs <strong>Grouped Cross-Validation by Source</strong>, guaranteeing that clips from any single microphone or AI engine never appear in both training and test sets. You can export the resulting model as a portable <code>model.json</code> or activate it immediately in your browser.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4>VoiceClone</h4>
+          <p>
+            An open educational and investigative tool for evaluating vocal authenticity against rising AI voice-cloning fraud and deepfake impersonation scams.
+          </p>
+          <p style="margin-top: 0.75rem; color: var(--accent-cyan); font-size: 0.8rem;">
+            🔒 100% Client-Side Privacy: Your voice never leaves your device.
+          </p>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Exploration</h5>
+          <ul class="footer-links-list">
+            <li><a href="index.html">Detector</a></li>
+            <li><a href="train.html">Training Lab</a></li>
+            <li><a href="how-it-works.html">How It Works</a></li>
+            <li><a href="scam-safety.html">Scam Safety Checklist</a></li>
+            <li><a href="about.html">Honest Limitations</a></li>
+            <li><a href="selftest.html">System Diagnostics</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Emergency Help</h5>
+          <ul class="footer-links-list">
+            <li><a href="scam-safety.html#helplines">Cybercrime Helplines</a></li>
+            <li><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">India 1930 Portal</a></li>
+            <li><a href="https://www.ic3.gov" target="_blank" rel="noopener">US FBI IC3</a></li>
+            <li><a href="https://www.actionfraud.police.uk" target="_blank" rel="noopener">UK Action Fraud</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-disclaimer-bottom">
+        <p>
+          <strong>Legal Disclaimer:</strong> VoiceClone is a client-side probabilistic detection tool intended for educational and preliminary screening purposes. Deepfake speech detection is an adversarial research field with imperfect accuracy. Never make financial, legal, or emergency decisions based solely on automated audio analysis.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    const menuToggle = document.getElementById('mobile-menu-btn');
+    const navLinks = document.getElementById('nav-links');
+    if (menuToggle && navLinks) {
+      menuToggle.addEventListener('click', () => {
+        const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
+        menuToggle.setAttribute('aria-expanded', !expanded);
+        navLinks.classList.toggle('open', !expanded);
+      });
+    }
+  </script>
+</body>
+</html>

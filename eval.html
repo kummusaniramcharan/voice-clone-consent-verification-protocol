@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Evaluation &amp; Benchmark (/eval) — VoiceClone</title>
+  <meta name="description" content="In-browser evaluation dashboard for VoiceClone's wav2vec2 ONNX model. Run batch evaluations on labeled human and AI audio, view confusion matrix, test codec robustness, and calibrate decision thresholds.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0b14'/><path d='M6 16h3M11 10v12M16 6v20M21 11v10M26 16h2' stroke='%234cc9ff' stroke-width='2.8' stroke-linecap='round'/></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VoiceClone Home">
+        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <span>VoiceClone</span>
+        <span class="brand-tagline-small">Zero-Upload</span>
+      </a>
+
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <nav role="navigation">
+        <ul id="nav-links" class="nav-links">
+          <li><a href="index.html" class="nav-link">Detector</a></li>
+          <li><a href="train.html" class="nav-link">Training Lab</a></li>
+          <li><a href="eval.html" class="nav-link active" aria-current="page">Model Benchmark (/eval)</a></li>
+          <li><a href="diagnose.html" class="nav-link">Diagnostics (/diagnose)</a></li>
+          <li><a href="how-it-works.html" class="nav-link">How It Works</a></li>
+          <li><a href="scam-safety.html" class="nav-link">Scam Safety</a></li>
+          <li><a href="about.html" class="nav-link">About &amp; Limitations</a></li>
+          <li><a href="selftest.html" class="nav-link">System Test</a></li>
+          <li><span class="nav-badge-pill">Client-Side Only</span></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 3.5rem; padding-bottom: 5rem;">
+    
+    <!-- Hero Header -->
+    <div style="text-align: center; max-width: 820px; margin: 0 auto 2.5rem;">
+      <span class="hero-wave-badge badge-neutral" style="margin-bottom: 1rem;">Hackathon Evaluation Suite</span>
+      <h1 style="font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 1rem;">
+        Model Benchmark &amp; Threshold Calibration (/eval)
+      </h1>
+      <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6;">
+        Evaluates the self-hosted quantized wav2vec2 ONNX deepfake classifier across 67 labeled benchmark audio items (WhatsApp voice notes, phone audio, eSpeak formant synthesis, and modern Microsoft Neural TTS across 10 diverse voices). Zero audio data leaves your browser.
+      </p>
+    </div>
+
+    <!-- Execution Card -->
+    <div class="glass-card" style="margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.35rem; color: #ffffff;">Batch Evaluation Runner</h2>
+          <p id="eval-status-text" style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Ready to evaluate 67 benchmark audio items across human, formant, and neural TTS domains.
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button id="btn-run-eval" class="btn-primary-analyze" type="button" style="padding: 0.65rem 1.4rem;">
+            <span>🚀 Run Benchmark Evaluation</span>
+          </button>
+          <button id="btn-export-eval-csv" class="btn-secondary" type="button" disabled>
+            <span>📥 Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Evaluation Progress -->
+      <div id="eval-progress-box" class="model-progress-box" hidden style="margin-top: 1.5rem;">
+        <div class="model-progress-meta">
+          <span id="eval-progress-label">Preparing model and decoding files...</span>
+          <span id="eval-progress-counter" class="model-cache-note">0 / 42</span>
+        </div>
+        <div class="progress-track">
+          <div id="eval-progress-fill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Dashboard (Shown after run) -->
+    <div id="eval-results-container" hidden>
+      
+      <!-- Top Summary Metrics Grid -->
+      <div class="metrics-grid" style="margin-bottom: 2rem;">
+        <div class="metric-card">
+          <div class="metric-label">Overall Accuracy</div>
+          <div id="metric-accuracy" class="metric-value highlight">—%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Balanced Accuracy</div>
+          <div id="metric-balanced-acc" class="metric-value" style="color: var(--accent-cyan);">—%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">False AI on Human</div>
+          <div id="metric-false-ai" class="metric-value" style="color: var(--color-human);">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">AI Recall (Detection)</div>
+          <div id="metric-ai-recall" class="metric-value" style="color: var(--accent-purple);">—%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Human Specificity</div>
+          <div id="metric-human-spec" class="metric-value" style="color: var(--color-human);">—%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Files Tested</div>
+          <div id="metric-total-files" class="metric-value">0</div>
+        </div>
+      </div>
+
+      <!-- Confusion Matrix & Threshold Calibration Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        
+        <!-- Confusion Matrix -->
+        <div class="glass-card">
+          <h3 style="font-size: 1.15rem; color: #ffffff; margin-bottom: 0.5rem;">Confusion Matrix</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Classification outcomes on benchmark callset.
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; text-align: center;">
+            <div style="background: rgba(0, 245, 212, 0.1); border: 1px solid rgba(0, 245, 212, 0.3); border-radius: var(--radius-sm); padding: 1.2rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-mint); font-weight: 600;">True Positive (AI &rarr; AI)</div>
+              <div id="cm-eval-tp" style="font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+            <div style="background: rgba(255, 56, 96, 0.1); border: 1px solid rgba(255, 56, 96, 0.3); border-radius: var(--radius-sm); padding: 1.2rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-alert); font-weight: 600;">False Positive (Human &rarr; AI)</div>
+              <div id="cm-eval-fp" style="font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+            <div style="background: rgba(255, 56, 96, 0.1); border: 1px solid rgba(255, 56, 96, 0.3); border-radius: var(--radius-sm); padding: 1.2rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-alert); font-weight: 600;">False Negative (AI &rarr; Human)</div>
+              <div id="cm-eval-fn" style="font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+            <div style="background: rgba(76, 201, 255, 0.1); border: 1px solid rgba(76, 201, 255, 0.3); border-radius: var(--radius-sm); padding: 1.2rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-cyan); font-weight: 600;">True Negative (Human &rarr; Human)</div>
+              <div id="cm-eval-tn" style="font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Decision Threshold Calibration -->
+        <div class="glass-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="font-size: 1.15rem; color: #ffffff;">Threshold Calibration</h3>
+            <span id="eval-threshold-display" style="font-family: monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan);">0.50</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Calibrate decision boundary. Current verdict bands: &lt;0.35 Human, 0.35–0.65 Inconclusive, &gt;0.65 AI.
+          </p>
+
+          <input type="range" id="eval-threshold-slider" min="0.10" max="0.90" step="0.01" value="0.50" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
+          
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 0.4rem;">
+            <span>0.10 (High Sensitivity)</span>
+            <span>0.50 (Standard Calibrated)</span>
+            <span>0.90 (High Specificity)</span>
+          </div>
+
+          <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem;">
+              <span>Calibrated Decision Threshold:</span>
+              <strong style="color: #ffffff;">0.50 P(AI)</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem;">
+              <span>Safe Human Upper Bound:</span>
+              <strong style="color: var(--color-human);">&le; 35%</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span>AI Positive Lower Bound:</span>
+              <strong style="color: var(--color-ai);">&ge; 65%</strong>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Codec Robustness Testing Suite (Requirement 9) -->
+      <div class="glass-card" style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; color: #ffffff; margin-bottom: 0.5rem;">
+          📻 Codec-Robustness Evaluation Suite (Requirement 9)
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Verifies that low-bitrate compression (e.g. WhatsApp voice notes, 64 kbps MP3, Opus, AAC) does not inflate AI likelihood on authentic human voices.
+        </p>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-subtle); text-align: left;">
+                <th style="padding: 0.6rem 0.8rem;">Codec / Profile</th>
+                <th style="padding: 0.6rem 0.8rem;">Source Format</th>
+                <th style="padding: 0.6rem 0.8rem;">Bitrate / Bandwidth</th>
+                <th style="padding: 0.6rem 0.8rem;">Ground Truth</th>
+                <th style="padding: 0.6rem 0.8rem;">Model AI %</th>
+                <th style="padding: 0.6rem 0.8rem;">Verdict</th>
+                <th style="padding: 0.6rem 0.8rem;">Robustness Check</th>
+              </tr>
+            </thead>
+            <tbody id="codec-robustness-tbody">
+              <!-- Populated by eval.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detailed Per-File Benchmark Table -->
+      <div class="glass-card">
+        <h3 style="font-size: 1.25rem; color: #ffffff; margin-bottom: 0.5rem;">
+          📋 Per-File Evaluation Breakdown (40+ Samples)
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Shows exact audio duration, speech windows evaluated, median score, and classification outcome for every benchmark audio file.
+        </p>
+
+        <div style="overflow-x: auto; max-height: 500px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+          <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-subtle); background: rgba(255, 255, 255, 0.04); position: sticky; top: 0; z-index: 2; text-align: left;">
+                <th style="padding: 0.6rem 0.8rem;">#</th>
+                <th style="padding: 0.6rem 0.8rem;">File / Utterance</th>
+                <th style="padding: 0.6rem 0.8rem;">Ground Truth</th>
+                <th style="padding: 0.6rem 0.8rem;">Format / Codec</th>
+                <th style="padding: 0.6rem 0.8rem;">Speech Windows</th>
+                <th style="padding: 0.6rem 0.8rem;">Per-Window Scores</th>
+                <th style="padding: 0.6rem 0.8rem;">Median AI %</th>
+                <th style="padding: 0.6rem 0.8rem;">Predicted Verdict</th>
+                <th style="padding: 0.6rem 0.8rem;">Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="eval-files-tbody">
+              <!-- Populated by eval.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4>VoiceClone</h4>
+          <p>
+            An open educational and investigative tool for evaluating vocal authenticity against rising AI voice-cloning fraud and deepfake impersonation scams.
+          </p>
+          <p style="margin-top: 0.75rem; color: var(--accent-cyan); font-size: 0.8rem;">
+            🔒 100% Client-Side Privacy: Your voice never leaves your device.
+          </p>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Exploration</h5>
+          <ul class="footer-links-list">
+            <li><a href="index.html">Detector</a></li>
+            <li><a href="train.html">Training Lab</a></li>
+            <li><a href="eval.html">Model Benchmark (/eval)</a></li>
+            <li><a href="how-it-works.html">How It Works</a></li>
+            <li><a href="scam-safety.html">Scam Safety Checklist</a></li>
+            <li><a href="about.html">Honest Limitations</a></li>
+            <li><a href="selftest.html">System Diagnostics</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Emergency Help</h5>
+          <ul class="footer-links-list">
+            <li><a href="scam-safety.html#helplines">Cybercrime Helplines</a></li>
+            <li><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">India 1930 Portal</a></li>
+            <li><a href="https://www.ic3.gov" target="_blank" rel="noopener">US FBI IC3</a></li>
+            <li><a href="https://www.actionfraud.police.uk" target="_blank" rel="noopener">UK Action Fraud</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/eval.js"></script>
+</body>
+</html>

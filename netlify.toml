@@ -1,0 +1,72 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/train"
+  to = "/train.html"
+  status = 200
+
+[[redirects]]
+  from = "/eval"
+  to = "/eval.html"
+  status = 200
+
+[[redirects]]
+  from = "/diagnose"
+  to = "/diagnose.html"
+  status = 200
+
+[[redirects]]
+  from = "/how-it-works"
+  to = "/how-it-works.html"
+  status = 200
+
+[[redirects]]
+  from = "/scam-safety"
+  to = "/scam-safety.html"
+  status = 200
+
+[[redirects]]
+  from = "/about"
+  to = "/about.html"
+  status = 200
+
+[[redirects]]
+  from = "/selftest"
+  to = "/selftest.html"
+  status = 200
+
+# MIME Types and CORS headers for assets
+[[headers]]
+  for = "/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000, immutable"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/*.onnx"
+  [headers.values]
+    Content-Type = "application/octet-stream"
+    Cache-Control = "public, max-age=31536000, immutable"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/js/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/css/*.css"
+  [headers.values]
+    Content-Type = "text/css; charset=utf-8"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Note: Do not set restrictive COEP/COOP headers that block Hugging Face CDN model weights

@@ -1,0 +1,8 @@
+/train         /train.html          200
+/eval          /eval.html           200
+/diagnose      /diagnose.html       200
+/how-it-works   /how-it-works.html   200
+/scam-safety    /scam-safety.html    200
+/about          /about.html          200
+/selftest       /selftest.html       200
+/*              /index.html          200

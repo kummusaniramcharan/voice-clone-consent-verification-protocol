@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About &amp; Honest Limitations — VoiceClone</title>
+  <meta name="description" content="Transparent overview of VoiceClone's accuracy limitations, audio compression hurdles, AI adversarial evolution, and open-source model credits.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="VoiceClone Limitations, Accuracy Honesty &amp; Architecture">
+  <meta property="og:description" content="Why synthetic voice detection is probabilistic, where detectors fail, and full credits for underlying open-source technologies.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0b14'/><path d='M6 16h3M11 10v12M16 6v20M21 11v10M26 16h2' stroke='%234cc9ff' stroke-width='2.8' stroke-linecap='round'/></svg>">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <style>
+    .limits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.75rem;
+      margin: 2.5rem 0;
+    }
+    .limit-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      border-top: 3px solid var(--color-amber);
+    }
+    .limit-title {
+      font-size: 1.15rem;
+      margin-bottom: 0.75rem;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .limit-text {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .credits-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .credits-table th, .credits-table td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .credits-table th {
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VoiceClone Home">
+        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <span>VoiceClone</span>
+        <span class="brand-tagline-small">Zero-Upload</span>
+      </a>
+
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <nav role="navigation">
+        <ul id="nav-links" class="nav-links">
+          <li><a href="index.html" class="nav-link">Detector</a></li>
+          <li><a href="train.html" class="nav-link">Training Lab</a></li>
+          <li><a href="how-it-works.html" class="nav-link">How It Works</a></li>
+          <li><a href="scam-safety.html" class="nav-link">Scam Safety</a></li>
+          <li><a href="about.html" class="nav-link active" aria-current="page">About &amp; Limitations</a></li>
+          <li><a href="selftest.html" class="nav-link">System Test</a></li>
+          <li><span class="nav-badge-pill">Client-Side Only</span></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 3.5rem; padding-bottom: 5rem;">
+    
+    <!-- Hero Intro -->
+    <div style="text-align: center; max-width: 820px; margin: 0 auto 3rem;">
+      <span class="hero-wave-badge badge-neutral" style="margin-bottom: 1rem;">Scientific Transparency</span>
+      <h1 style="font-size: clamp(2rem, 4vw, 3.2rem); margin-bottom: 1.25rem;">
+        Honest Limitations &amp; Architecture
+      </h1>
+      <p style="font-size: 1.1rem; color: var(--text-muted); line-height: 1.6;">
+        Any tool that promises 100% guaranteed deepfake detection is misrepresenting reality. Acoustic forensics is an adversarial cat-and-mouse game. Here is a clear breakdown of where current detectors excel, and where they can fail.
+      </p>
+    </div>
+
+    <!-- Core Limitations (Feature 4 requirements) -->
+    <section aria-labelledby="limits-title">
+      <h2 id="limits-title" style="font-size: 1.8rem; margin-bottom: 0.5rem; text-align: center;">
+        Known Detection Limitations
+      </h2>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.95rem;">
+        Crucial technical factors that affect speech classification reliability:
+      </p>
+
+      <div class="limits-grid">
+        
+        <!-- Limit 1 -->
+        <div class="limit-card">
+          <h3 class="limit-title">
+            <span>⚡</span>
+            <span>Rapidly Evolving Generative Models</span>
+          </h3>
+          <p class="limit-text">
+            Text-to-speech models and neural vocoders improve rapidly every few months. Newer diffusion-based speech synthesizers (like Voicebox, StyleTTS2, and modern zero-shot models) generate significantly smoother phase transitions and more natural breathing patterns than older concatenative or autoregressive models, making them progressively harder for static classifiers to distinguish.
+          </p>
+        </div>
+
+        <!-- Limit 2 -->
+        <div class="limit-card">
+          <h3 class="limit-title">
+            <span>📉</span>
+            <span>Phone Call &amp; WhatsApp Compression</span>
+          </h3>
+          <p class="limit-text">
+            Cellular voice networks (GSM/AMR codecs) and messaging apps (WhatsApp Opus compression) strip audio frequencies above 3,400 Hz or 6,000 Hz to conserve mobile bandwidth. Because neural vocoder artifacts often cluster in higher frequency bands (6 kHz – 16 kHz), aggressive lossy compression blurs these acoustic fingerprints, significantly reducing detection confidence.
+          </p>
+        </div>
+
+        <!-- Limit 3 -->
+        <div class="limit-card">
+          <h3 class="limit-title">
+            <span>🌐</span>
+            <span>Languages, Accents &amp; Dialects</span>
+          </h3>
+          <p class="limit-text">
+            Most open-source speech deepfake datasets (such as ASVspoof and In-the-Wild) feature predominantly English speakers with North American or European accents. Classification accuracy drops when evaluating tonal languages (Mandarin, Vietnamese), heavily accented regional dialects, or speech containing rapid code-switching.
+          </p>
+        </div>
+
+        <!-- Limit 4 -->
+        <div class="limit-card">
+          <h3 class="limit-title">
+            <span>⚠️</span>
+            <span>False Positives on Real Human Voices</span>
+          </h3>
+          <p class="limit-text">
+            Natural human speech can occasionally trigger synthetic warnings if the recording contains pitch-correction software (Autotune), heavy dynamic compression, studio noise gates, or if the speaker has a naturally monotone vocal delivery or dysarthria. High microphone clipping can also mimic vocoder square-wave distortion.
+          </p>
+        </div>
+
+        <!-- Limit 5 -->
+        <div class="limit-card">
+          <h3 class="limit-title">
+            <span>📱</span>
+            <span>Browser Cellular Sandboxing Constraints</span>
+          </h3>
+          <p class="limit-text">
+            Under Android 10+ and iOS privacy architecture, third-party web apps cannot secretly record active cellular phone calls. The Live Scam Tracker relies on honest input channels: microphone speakerphone capture, tab/system audio sharing (<code>getDisplayMedia</code>) for web calls, or our standalone Android CallScreening companion service.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Why 95% Cap & No Absolute Certainty -->
+    <div class="glass-card" style="margin: 3.5rem 0;">
+      <h2 style="font-size: 1.6rem; margin-bottom: 1rem;">Why We Cap Displayed Certainty at 95%</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; margin-bottom: 1rem;">
+        In VoiceClone, the circular probability gauge is strictly capped at a maximum of <strong>95%</strong>, and scores between 35% and 65% are marked as <strong>Inconclusive</strong>.
+      </p>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7;">
+        Displaying "100% AI" or "100% Real" creates dangerous false confidence. If a victim relies entirely on an automated detector to dismiss an actual family emergency, or conversely trusts an AI caller that slipped through, catastrophic harm can result. Automated detection must always be paired with operational verification (such as calling back on a verified number or asking a family safe-word).
+      </p>
+    </div>
+
+    <!-- Technical Model Architecture -->
+    <section style="margin: 3.5rem 0;">
+      <h2 style="font-size: 1.8rem; margin-bottom: 1rem;">Underlying Architecture</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.5rem;">
+        VoiceClone uses a transparent, client-side digital signal processing (DSP) and trained classification pipeline running inside browser Web Workers:
+      </p>
+
+      <ul style="padding-left: 1.5rem; font-size: 0.92rem; color: var(--text-muted); line-height: 1.8;">
+        <li><strong>DSP Acoustic Feature Extraction:</strong> 24 physical cues computed per clip: recording noise floor and native bandwidth, Hann-windowed FFT spectral flatness, centroid, 95% rolloff, 4-8 kHz energy, spectral flux CV, 26-filter MFCC temporal variance and delta, normalized autocorrelation pitch (70-400 Hz), F0 mean, semitone range, flat pitch steps (&lt;0.5 Hz plateaus), harmonics-to-noise ratio (HNR), vocal shimmer, and pause cadence dynamics.</li>
+        <li><strong>On-Device Training &amp; Validation:</strong> L2-regularized logistic regression trained via gradient descent (500 epochs, &lambda;=0.01, &eta;=0.1, balanced class weights). Evaluated with Grouped Cross-Validation by audio source so speakers/microphones never leak between training and test sets.</li>
+        <li><strong>Zero Upload Guarantee:</strong> All audio decoding, feature extraction, and training run strictly inside browser memory and IndexedDB. No audio is ever uploaded anywhere.</li>
+      </ul>
+    </section>
+
+    <!-- Open Source Credits & Licences -->
+    <section class="glass-card" style="margin-top: 3rem;">
+      <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem;">Credits &amp; Open Source Licenses</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        VoiceClone is built using generous open-source machine learning and web standards projects:
+      </p>
+
+      <div style="overflow-x: auto;">
+        <table class="credits-table">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Origin / Maintainer</th>
+              <th>License</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Transformers.js</strong></td>
+              <td>Hugging Face</td>
+              <td>Apache 2.0</td>
+              <td>Browser ONNX neural inference runtime (WASM/WebGPU)</td>
+            </tr>
+            <tr>
+              <td><strong>wav2vec 2.0</strong></td>
+              <td>Meta AI Research</td>
+              <td>MIT License</td>
+              <td>Self-supervised acoustic speech representations</td>
+            </tr>
+            <tr>
+              <td><strong>wav2vec2 Deepfake Audio ONNX</strong></td>
+              <td>ai8shiro / Hugging Face Community</td>
+              <td>MIT License</td>
+              <td>Wav2Vec2 sequence classification weights fine-tuned on speech anti-spoofing</td>
+            </tr>
+            <tr>
+              <td><strong>Web Audio API &amp; Worklets</strong></td>
+              <td>W3C Standards</td>
+              <td>Public Standard</td>
+              <td>Raw PCM microphone capture &amp; 16kHz resampling</td>
+            </tr>
+            <tr>
+              <td><strong>Space Grotesk &amp; Inter</strong></td>
+              <td>Google Fonts / Florian Karsten &amp; Rasmus Andersson</td>
+              <td>SIL Open Font License</td>
+              <td>Typography and visual interface design</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4>VoiceClone</h4>
+          <p>
+            An open educational and investigative tool for evaluating vocal authenticity against rising AI voice-cloning fraud and deepfake impersonation scams.
+          </p>
+          <p style="margin-top: 0.75rem; color: var(--accent-cyan); font-size: 0.8rem;">
+            🔒 100% Client-Side Privacy: Your voice never leaves your device.
+          </p>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Exploration</h5>
+          <ul class="footer-links-list">
+            <li><a href="index.html">Detector</a></li>
+            <li><a href="train.html">Training Lab</a></li>
+            <li><a href="how-it-works.html">How It Works</a></li>
+            <li><a href="scam-safety.html">Scam Safety Checklist</a></li>
+            <li><a href="about.html">Honest Limitations</a></li>
+            <li><a href="selftest.html">System Diagnostics</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Emergency Help</h5>
+          <ul class="footer-links-list">
+            <li><a href="scam-safety.html#helplines">Cybercrime Helplines</a></li>
+            <li><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">India 1930 Portal</a></li>
+            <li><a href="https://www.ic3.gov" target="_blank" rel="noopener">US FBI IC3</a></li>
+            <li><a href="https://www.actionfraud.police.uk" target="_blank" rel="noopener">UK Action Fraud</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-disclaimer-bottom">
+        <p>
+          <strong>Legal Disclaimer:</strong> VoiceClone is a client-side probabilistic detection tool intended for educational and preliminary screening purposes. Deepfake speech detection is an adversarial research field with imperfect accuracy. Never make financial, legal, or emergency decisions based solely on automated audio analysis.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    // Mobile navigation toggle
+    const menuToggle = document.getElementById('mobile-menu-btn');
+    const navLinks = document.getElementById('nav-links');
+    if (menuToggle && navLinks) {
+      menuToggle.addEventListener('click', () => {
+        const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
+        menuToggle.setAttribute('aria-expanded', !expanded);
+        navLinks.classList.toggle('open', !expanded);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Training Lab — VoiceClone In-Browser AI Voice Detector</title>
+  <meta name="description" content="Train your own client-side AI voice detector directly in the browser from your labeled audio files. Zero uploads, 100% private.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0b14'/><path d='M6 16h3M11 10v12M16 6v20M21 11v10M26 16h2' stroke='%234cc9ff' stroke-width='2.8' stroke-linecap='round'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VoiceClone Home">
+        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+        <span>VoiceClone</span>
+        <span class="brand-tagline-small">Zero-Upload</span>
+      </a>
+
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <nav role="navigation">
+        <ul id="nav-links" class="nav-links">
+          <li><a href="index.html" class="nav-link">Detector</a></li>
+          <li><a href="train.html" class="nav-link active" aria-current="page">Training Lab</a></li>
+          <li><a href="how-it-works.html" class="nav-link">How It Works</a></li>
+          <li><a href="scam-safety.html" class="nav-link">Scam Safety</a></li>
+          <li><a href="about.html" class="nav-link">About &amp; Limitations</a></li>
+          <li><a href="selftest.html" class="nav-link">System Test</a></li>
+          <li>
+            <span class="nav-badge-pill" title="Training runs entirely inside your browser Web Worker via IndexedDB.">
+              Client-Side Trainer
+            </span>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container" role="main" style="padding-top: 2rem; padding-bottom: 4rem;">
+
+    <!-- Hero Section -->
+    <section class="hero-section" style="margin-bottom: 2rem;">
+      <div class="privacy-banner-pill">
+        <span class="privacy-shield-icon" aria-hidden="true">🔒</span>
+        <span>100% On-Device Training • Audio decoding, DSP extraction &amp; model fitting stay in your browser</span>
+      </div>
+      <h1 class="hero-title">
+        Custom Detector <span class="gradient-text">Training Lab</span>
+      </h1>
+      <p class="hero-subtitle">
+        Train your own AI voice detector from labeled recordings. Extract 24 acoustic and voice cues, standardize features, apply synthetic augmentations, and evaluate with grouped cross-validation.
+      </p>
+    </section>
+
+    <!-- Active Model Banner (If present in localStorage) -->
+    <div id="active-model-banner" class="glass-card" style="margin-bottom: 1.5rem; border-color: rgba(76, 201, 255, 0.4); background: rgba(76, 201, 255, 0.05);" hidden>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <span class="status-pill ready">Active In-Browser Model</span>
+          <p id="active-model-label" style="margin-top: 0.5rem; font-size: 0.95rem; color: #ffffff;"></p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button id="btn-reset-model" class="btn-secondary btn-danger" type="button" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+            Reset to Untrained
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Ingest & Dataset -->
+    <div class="glass-card" style="margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+        <div>
+          <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: #ffffff; margin-bottom: 0.25rem;">
+            1. Labeled Audio Dataset
+          </h2>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">
+            Drop audio files below. Filename prefixes <code>human_</code>, <code>ai_</code>, <code>voice_</code> (AI) and <code>AUD-</code> (human) are auto-detected.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span id="dataset-count-badge" class="status-pill ready">0 Clips</span>
+        </div>
+      </div>
+
+      <!-- Quick Start: Load Bundled Samples -->
+      <div style="background: rgba(76, 201, 255, 0.06); border: 1px solid rgba(76, 201, 255, 0.25); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <span style="font-size: 0.9rem; font-weight: 600; color: var(--accent-cyan);">⚡ Quick Start</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">Load the 19 bundled sample files (12 AI + 7 Human) to start training immediately</span>
+          </div>
+          <button id="btn-load-bundled-samples" class="btn-secondary" type="button" style="white-space: nowrap;">
+            <span>🎵 Load Bundled Samples (19 clips)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div id="train-drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Dataset files drop zone">
+        <span class="drop-icon" aria-hidden="true">📁</span>
+        <p style="font-size: 1.1rem; font-weight: 600; color: #ffffff; margin-bottom: 0.5rem;">
+          Drag &amp; drop audio files here to build your training set
+        </p>
+        <button id="btn-browse-dataset" class="btn-upload-browse" type="button">Browse Audio Files</button>
+        <p class="dsp-info-tooltip" style="margin-top: 0.5rem;">
+          Supports WAV, MP3, M4A, OGG, Opus, WebM, AAC, FLAC (Max 20MB per file, first 60s analyzed)
+        </p>
+      </div>
+      <input type="file" id="train-file-input" accept="audio/*,video/mp4,.mp3,.wav,.m4a,.mp4,.ogg,.opus,.webm,.aac,.flac" multiple hidden>
+
+      <!-- Ingest Progress -->
+      <div id="ingest-progress-box" class="model-progress-box" hidden style="margin-top: 1rem;">
+        <div class="model-progress-meta">
+          <span id="ingest-progress-text">Decoding and extracting features...</span>
+        </div>
+        <div class="progress-track">
+          <div id="ingest-progress-fill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="btn-export-csv" class="btn-secondary" type="button" title="Export features as CSV">
+            <span>📥 Export Dataset (CSV)</span>
+          </button>
+          <button id="btn-import-csv" class="btn-secondary" type="button" title="Import pre-extracted features">
+            <span>📤 Import CSV</span>
+          </button>
+          <input type="file" id="csv-file-input" accept=".csv" hidden>
+        </div>
+        <button id="btn-clear-dataset" class="btn-secondary btn-danger" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+          Clear All Clips
+        </button>
+      </div>
+
+      <!-- Dataset Table -->
+      <div style="overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: rgba(0, 0, 0, 0.2);">
+        <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-subtle); background: rgba(255, 255, 255, 0.03);">
+              <th style="padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim);">File</th>
+              <th style="padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim); width: 170px;">Label</th>
+              <th style="padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim); width: 220px;">Source</th>
+              <th style="padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim); width: 90px;">Duration</th>
+              <th style="padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim); width: 100px;">Status</th>
+              <th style="padding: 0.75rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: var(--text-dim); width: 60px;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="dataset-tbody">
+            <!-- Rows injected dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Training Blocked Notice -->
+      <div id="training-blocked-notice" class="quality-warnings-banner" hidden style="margin-top: 1rem;">
+        ⚠️ Training is blocked: Every clip must have a label and a source.
+      </div>
+    </div>
+
+    <!-- Section 2: Training Configuration -->
+    <div class="glass-card" style="margin-bottom: 2rem;">
+      <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: #ffffff; margin-bottom: 0.5rem;">
+        2. Training &amp; Validation Parameters
+      </h2>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Configure feature presets, robust validation splits, and acoustic data augmentations to prevent microphone bias.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        
+        <!-- Preset & Windowing -->
+        <div>
+          <label for="feature-preset-select" style="display: block; font-size: 0.88rem; font-weight: 600; color: #ffffff; margin-bottom: 0.5rem;">
+            Feature Preset
+          </label>
+          <select id="feature-preset-select" class="form-control" style="width: 100%; padding: 0.6rem 0.8rem; background: var(--bg-card); color: #fff; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
+            <option value="all" selected>All Cues (24 Features)</option>
+            <option value="voice_timing">Voice &amp; Timing Only (No recording/codec cues)</option>
+            <option value="recording">Recording Cues Only (Noise, dynamic range, silence, bandwidth)</option>
+          </select>
+
+          <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.88rem; color: #ffffff;">
+            <input type="checkbox" id="chk-windowing" style="accent-color: var(--accent-cyan); width: 16px; height: 16px;">
+            <span>Split clips into 4s windows (50% overlap)</span>
+          </label>
+          <p style="font-size: 0.78rem; color: var(--text-dim); margin-left: 1.8rem; margin-top: 0.2rem;">
+            Increases training examples while preserving parent clip source assignments.
+          </p>
+        </div>
+
+        <!-- Data Augmentations (Prevent hardware cheating) -->
+        <div>
+          <label style="display: block; font-size: 0.88rem; font-weight: 600; color: #ffffff; margin-bottom: 0.5rem;">
+            Robust Data Augmentation (Training data only)
+          </label>
+          <p style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.75rem;">
+            Prevents the logistic classifier from memorizing microphone, room, or codec quirks.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.84rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="aug-gain" checked style="accent-color: var(--accent-cyan);">
+              <span>Random gain (&plusmn;6 dB)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="aug-noise" checked style="accent-color: var(--accent-cyan);">
+              <span>Pink background noise (10–30 dB SNR)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="aug-lowpass" checked style="accent-color: var(--accent-cyan);">
+              <span>Random low-pass filter (4–8 kHz telephony)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="aug-reverb" checked style="accent-color: var(--accent-cyan);">
+              <span>Synthetic room reverberation (RT60 0.1–0.5s)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="aug-quant" checked style="accent-color: var(--accent-cyan);">
+              <span>8 to 12 bit lossy quantization</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Start Training CTA -->
+      <div style="margin-top: 2rem; border-top: 1px solid var(--border-subtle); padding-top: 1.5rem; display: flex; justify-content: flex-end;">
+        <button id="btn-start-training" class="btn-primary-analyze" type="button" style="padding: 0.75rem 2rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span>Fit L2-Regularized Logistic Model</span>
+        </button>
+      </div>
+
+      <!-- Training Progress Box -->
+      <div id="training-progress-box" class="model-progress-box" hidden style="margin-top: 1.5rem;">
+        <div class="model-progress-meta">
+          <span id="train-progress-text">Fitting model parameters...</span>
+          <span class="model-cache-note">500 gradient descent epochs (&lambda;=0.01, &eta;=0.1)</span>
+        </div>
+        <div class="progress-track">
+          <div id="train-progress-fill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Training Results & Validation (Hidden until trained) -->
+    <div id="training-results-card" class="glass-card" hidden style="margin-bottom: 2rem;">
+      <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: #ffffff; margin-bottom: 0.5rem;">
+        3. Validation Report &amp; Model Diagnostics
+      </h2>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Evaluated using Grouped Cross-Validation: audio from any given source is strictly isolated to either training or testing.
+      </p>
+
+      <!-- Untrustworthy Validation Banner (< 3 sources per class) -->
+      <div id="untrusted-validation-banner" class="quality-warnings-banner" hidden style="margin-bottom: 1.5rem; border-color: var(--accent-alert); background: rgba(255, 56, 96, 0.15);">
+        <strong style="color: #ffffff;">⚠️ Validation is not trustworthy:</strong> There are fewer than 3 unique sources per class in the dataset. The accuracy below is labeled as <em>Training Accuracy</em>. Add recordings from multiple distinct speakers, phones, and AI engines to enable trustworthy grouped validation.
+      </div>
+
+      <!-- Metrics Cards Grid -->
+      <div class="metrics-grid" style="margin-bottom: 2rem;">
+        <div class="metric-card">
+          <div id="metric-accuracy-label" class="metric-label">Grouped CV Accuracy</div>
+          <div id="res-cv-accuracy" class="metric-value" style="color: var(--accent-cyan);">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Balanced Accuracy</div>
+          <div id="res-cv-bal-acc" class="metric-value" style="color: var(--accent-mint);">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">ROC AUC</div>
+          <div id="res-cv-auc" class="metric-value" style="color: var(--accent-purple);">—</div>
+        </div>
+      </div>
+
+      <!-- Confusion Matrix & Sources Side-by-Side -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        
+        <!-- Confusion Matrix -->
+        <div class="canvas-card" style="padding: 1.25rem;">
+          <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 1rem;">Confusion Matrix</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; text-align: center;">
+            <div style="background: rgba(0, 245, 212, 0.1); border: 1px solid rgba(0, 245, 212, 0.3); border-radius: var(--radius-sm); padding: 1rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-mint);">True Positive (AI)</div>
+              <div id="cm-tp" style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+            <div style="background: rgba(255, 56, 96, 0.1); border: 1px solid rgba(255, 56, 96, 0.3); border-radius: var(--radius-sm); padding: 1rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-alert);">False Positive (Human as AI)</div>
+              <div id="cm-fp" style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+            <div style="background: rgba(255, 56, 96, 0.1); border: 1px solid rgba(255, 56, 96, 0.3); border-radius: var(--radius-sm); padding: 1rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-alert);">False Negative (AI as Human)</div>
+              <div id="cm-fn" style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+            <div style="background: rgba(76, 201, 255, 0.1); border: 1px solid rgba(76, 201, 255, 0.3); border-radius: var(--radius-sm); padding: 1rem;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--accent-cyan);">True Negative (Human)</div>
+              <div id="cm-tn" style="font-size: 1.8rem; font-weight: 700; color: #ffffff; margin-top: 0.25rem;">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accuracy per Source Table -->
+        <div class="canvas-card" style="padding: 1.25rem;">
+          <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 1rem;">Accuracy per Source</h3>
+          <div style="max-height: 220px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-subtle); color: var(--text-dim); text-align: left;">
+                  <th style="padding: 0.4rem 0.5rem;">Source</th>
+                  <th style="padding: 0.4rem 0.5rem;">Class</th>
+                  <th style="padding: 0.4rem 0.5rem;">Clips</th>
+                  <th style="padding: 0.4rem 0.5rem;">Correct</th>
+                  <th style="padding: 0.4rem 0.5rem;">Accuracy</th>
+                </tr>
+              </thead>
+              <tbody id="source-accuracy-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Leave-One-AI-Engine-Out Generalization Table -->
+      <div class="canvas-card" style="padding: 1.25rem; margin-bottom: 2rem;">
+        <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.5rem;">Leave-One-AI-Engine-Out Generalization</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Trains on all other sources and tests on the held-out AI engine to test synthetic generalization.
+        </p>
+        <div style="max-height: 200px; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-subtle); color: var(--text-dim); text-align: left;">
+                <th style="padding: 0.4rem 0.5rem;">Held-Out AI Engine</th>
+                <th style="padding: 0.4rem 0.5rem;">Total Clips</th>
+                <th style="padding: 0.4rem 0.5rem;">Detected as AI</th>
+                <th style="padding: 0.4rem 0.5rem;">Detection Rate</th>
+              </tr>
+            </thead>
+            <tbody id="leave-one-ai-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top 10 Signed Weights Bar Chart -->
+      <div class="canvas-card" style="padding: 1.25rem; margin-bottom: 2rem;">
+        <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.5rem;">Top 10 Feature Weights</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+          <span style="color: var(--accent-cyan);">Cyan bars (+)</span> increase AI probability. <span style="color: var(--accent-purple);">Purple bars (&minus;)</span> indicate natural human vocal properties.
+        </p>
+        <div id="weights-chart-container"></div>
+      </div>
+
+      <!-- Interactive Decision Threshold Slider -->
+      <div class="canvas-card" style="padding: 1.25rem; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h3 style="font-size: 1rem; color: #ffffff;">Decision Threshold Tuning</h3>
+          <span style="font-family: monospace; font-size: 1.1rem; color: var(--accent-cyan); font-weight: 700;" id="threshold-val">0.50</span>
+        </div>
+        <input type="range" id="threshold-slider" min="0.10" max="0.90" step="0.01" value="0.50" style="width: 100%; accent-color: var(--accent-cyan); cursor: pointer;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;">
+          <span>0.10 (High Recall / Catch all AI)</span>
+          <span>0.50 (Balanced)</span>
+          <span>0.90 (High Precision / Low False Alarms)</span>
+        </div>
+        <div style="display: flex; gap: 2rem; margin-top: 1rem; font-size: 0.85rem;">
+          <div>Precision: <strong id="thresh-precision" style="color: var(--accent-cyan);">—</strong></div>
+          <div>Recall: <strong id="thresh-recall" style="color: var(--accent-mint);">—</strong></div>
+          <div>F1 Score: <strong id="thresh-f1" style="color: #ffffff;">—</strong></div>
+        </div>
+      </div>
+
+      <!-- Model Deployment & Save Actions -->
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 1.5rem;">
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <button id="btn-use-model-now" class="btn-primary-analyze" type="button" style="padding: 0.65rem 1.4rem;">
+            <span>⭐ Use This Model Now (localStorage)</span>
+          </button>
+          <button id="btn-download-model" class="btn-secondary" type="button">
+            <span>💾 Download model.json</span>
+          </button>
+          <button id="btn-batch-test-dataset" class="btn-secondary" type="button" title="Score all loaded dataset clips with this model">
+            <span>🧪 Run Batch Test on Dataset</span>
+          </button>
+        </div>
+        <div>
+          <label class="btn-secondary" style="cursor: pointer;">
+            <span>📁 Load model.json</span>
+            <input type="file" id="load-model-input" accept=".json" hidden>
+          </label>
+        </div>
+      </div>
+
+      <!-- Batch Test Results (inline) -->
+      <div id="batch-test-results" hidden style="margin-top: 1.5rem; padding: 1.25rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+        <h3 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.75rem;">🧪 Batch Test Results</h3>
+        <div id="batch-test-content"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h4>VoiceClone</h4>
+          <p>
+            An open educational and investigative tool for evaluating vocal authenticity against rising AI voice-cloning fraud and deepfake impersonation scams.
+          </p>
+          <p style="margin-top: 0.75rem; color: var(--accent-cyan); font-size: 0.8rem;">
+            🔒 100% Client-Side Privacy: Your voice never leaves your device.
+          </p>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Exploration</h5>
+          <ul class="footer-links-list">
+            <li><a href="index.html">Detector</a></li>
+            <li><a href="train.html">Training Lab</a></li>
+            <li><a href="how-it-works.html">How It Works</a></li>
+            <li><a href="scam-safety.html">Scam Safety Checklist</a></li>
+            <li><a href="about.html">Honest Limitations</a></li>
+            <li><a href="selftest.html">System Diagnostics</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 style="color: #ffffff; margin-bottom: 0.75rem;">Emergency Help</h5>
+          <ul class="footer-links-list">
+            <li><a href="scam-safety.html#helplines">Cybercrime Helplines</a></li>
+            <li><a href="https://cybercrime.gov.in" target="_blank" rel="noopener">India 1930 Portal</a></li>
+            <li><a href="https://www.ic3.gov" target="_blank" rel="noopener">US FBI IC3</a></li>
+            <li><a href="https://www.actionfraud.police.uk" target="_blank" rel="noopener">UK Action Fraud</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-disclaimer-bottom">
+        <p>
+          <strong>Legal Disclaimer:</strong> VoiceClone is a client-side probabilistic detection tool intended for educational and preliminary screening purposes. Deepfake speech detection is an adversarial research field with imperfect accuracy. Never make financial, legal, or emergency decisions based solely on automated audio analysis.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initTrainLab } from './js/train.js';
+    document.addEventListener('DOMContentLoaded', () => {
+      initTrainLab();
+    });
+  </script>
+</body>
+</html>
